@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	database "ideanest/pkg"
 	model "ideanest/pkg/database/mongodb/models"
 	"log"
@@ -19,7 +20,6 @@ func AddOrganization(c *gin.Context) {
 	err := c.BindJSON(&organization)
 
 	if err != nil {
-		log.Fatal("1")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -38,7 +38,7 @@ func AddOrganization(c *gin.Context) {
 		}
 	} else {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "This organization already exists",
+			"message": "An organization with this name already exists. Please choose a different name.",
 		})
 		return
 	}
@@ -48,7 +48,6 @@ func AddOrganization(c *gin.Context) {
 	_, err = db.InsertOne(context.TODO(), organization)
 
 	if err != nil {
-		log.Fatal("5")
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
@@ -59,35 +58,178 @@ func AddOrganization(c *gin.Context) {
 }
 
 func GetAllOrganizations(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "Get all",
-	})
+	var organizations []bson.M
+	cursor, err := database.GetDB().Collection("organizations").Find(context.TODO(), bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err = cursor.All(context.TODO(), &organizations); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, organizations)
 }
 
 func GetOrganizationById(c *gin.Context) {
+	var organization model.Organization
 	id := c.Param("id")
-	for _, a := range organizations {
 
+	db := database.GetDB().Collection("organizations")
+
+	oid, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
-	c.JSON(200, gin.H{
-		"message": "Get by id",
-	})
+
+	err = db.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&organization)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		} else {
+			log.Printf("Error querying database: %v", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, organization)
+	return
 }
 
 func UpdateOrganization(c *gin.Context) {
+	var result bson.M
+	var organization model.Organization
+	id := c.Param("id")
+	db := database.GetDB().Collection("organizations")
+	err := c.BindJSON(&organization)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	oid, err := primitive.ObjectIDFromHex(id)
+
+	err = db.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&result)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"message": "Organization not found",
+			})
+			return
+		} else {
+			log.Printf("Error querying database: %v", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	err = db.FindOne(context.TODO(), bson.M{"name": organization.Name}).Decode(&result)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			// no organization has this name
+		} else {
+			log.Printf("Error querying database: %v", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	} else {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "An organization with this name already exists. Please choose a different name.",
+		})
+		return
+	}
+
+	_, err = db.UpdateOne(context.TODO(), bson.M{"_id": oid}, bson.M{"$set": organization})
+
 	c.JSON(200, gin.H{
-		"message": "update org",
+		"organization_id": id,
+		"name":            organization.Name,
+		"description":     organization.Description,
 	})
 }
 
 func DeleteOrganization(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "Delete",
+	db := database.GetDB().Collection("organizations")
+	organizationId := c.Param("id")
+
+	oid, err := primitive.ObjectIDFromHex(organizationId)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	result, err := db.DeleteOne(context.TODO(), bson.M{"_id": oid})
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if result.DeletedCount < 1 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Organization deleted successfully",
 	})
 }
 
 func InviteUserToOrganization(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "Invite ",
+	organizationId := c.Param("id")
+
+	oid, err := primitive.ObjectIDFromHex(organizationId)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	var body bson.M
+	var organization model.Organization
+
+	err = c.BindJSON(&body)
+
+	// Access email from body
+
+	email := body["email"].(string)
+
+	fmt.Println("email: ", email)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	db := database.GetDB().Collection("organizations")
+
+	err = db.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&organization)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"message": "Organization not found",
+			})
+			return
+		} else {
+			log.Printf("Error querying database: %v", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "In ",
 	})
 }

@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	database "ideanest/pkg"
 	model "ideanest/pkg/database/mongodb/models"
 	"log"
@@ -198,19 +197,17 @@ func InviteUserToOrganization(c *gin.Context) {
 
 	var body bson.M
 	var organization model.Organization
+	var orgUsers model.OrganizationMember
+	var user model.User
 
 	err = c.BindJSON(&body)
-
-	// Access email from body
-
-	email := body["email"].(string)
-
-	fmt.Println("email: ", email)
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+
+	email := body["email"].(string)
 
 	db := database.GetDB().Collection("organizations")
 
@@ -229,7 +226,62 @@ func InviteUserToOrganization(c *gin.Context) {
 		}
 	}
 
+	err = database.GetDB().Collection("users").FindOne(context.TODO(), bson.M{"email": email}).Decode(&user)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusNotFound, gin.H{
+				"message": "User not found",
+			})
+			return
+		} else {
+			log.Printf("Error querying database: %v", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Check if user is already a member of the organization
+	var result bson.M
+	err = database.GetDB().Collection("organization_members").FindOne(context.TODO(), bson.M{"user_id": user.ID, "org_id": organization.ID}).Decode(&result)
+
+	if err == nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"message": "User is already a member of this organization",
+		})
+		return
+	}
+
+	// Create a new organization member
+
+	orgUsers.ID = primitive.NewObjectID()
+	orgUsers.UserID = user.ID
+	orgUsers.AccessLevel = "r"
+	orgUsers.OrgID = organization.ID
+
+	_, err = database.GetDB().Collection("organization_members").InsertOne(context.TODO(), orgUsers)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// Add the user to the organization
+
+	_, err = database.GetDB().Collection("organizations").UpdateOne(
+		context.TODO(),
+		bson.M{"_id": oid},
+		bson.M{
+			"$push": bson.M{"organization_members": orgUsers.ID}, // Add the new member.
+		},
+	)
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "In ",
+		"message": "Invitation sent successfully to " + email + " for organization " + organization.Name,
 	})
 }

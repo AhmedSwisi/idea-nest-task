@@ -1,0 +1,405 @@
+{
+	"info": {
+		"_postman_id": "217dc82e-caeb-48b2-a7a4-950fc9131d99",
+		"name": "Ideanest task",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "27561819"
+	},
+	"item": [
+		{
+			"name": "Sign Up",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\": \"test@test.com\",\r\n    \"name\": \"Swisi\",\r\n    \"password\": \"123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/signup",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"signup"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\": \"test@test.com\",\r\n    \"password\": \"123\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/signin",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"signin"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Refresh Token",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDgzMDA1MzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.AFxqrwb-P6-quzbDcTcUWalonEkGy69ut0vaSoS3Z2k\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/refresh-token",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"refresh-token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Revoke Refresh Token",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"refresh_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MDgzMDA1MzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.AFxqrwb-P6-quzbDcTcUWalonEkGy69ut0vaSoS3Z2k\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/revoke-refresh-token",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"revoke-refresh-token"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get all orgs",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/organization",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"organization"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Organization",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\":\"Megaman corp\",\r\n    \"description\": \"yo\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/organization",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"organization"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Organization Details",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\":\"Zero Corp\",\r\n    \"description\": \"Megaman x8\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/organization/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"organization",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "65c95ed4f6390b12f27f1039"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Organization",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/organization/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"organization",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "65c95ed4f6390b12f27f1039"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Invite User to Organization",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"email\": \"test@test.com\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/organization/:id/invite",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"organization",
+						":id",
+						"invite"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "65c95ed4f6390b12f27f1039"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Organization By Id",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRob3JpemVkIjp0cnVlLCJleHAiOjE3MDc3ODIxMzIsInVzZXJfaWQiOiI2NWM5NWU0ZGY2MzkwYjEyZjI3ZjEwMzcifQ.sLWgTb49RAKbFSNnFSy_HX5Pau7PGm2-NQRJ4sF_W-0",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{url}}/organization/:id",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"organization",
+						":id"
+					],
+					"variable": [
+						{
+							"key": "id",
+							"value": "65c7c486b441be5edc035379"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

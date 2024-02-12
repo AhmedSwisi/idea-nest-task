@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	database "ideanest/pkg"
 	handlers "ideanest/pkg/api/handlers"
+	middlewares "ideanest/pkg/api/middleware"
 	"log"
 	"os"
 
@@ -20,6 +22,17 @@ func init() {
 
 func main() {
 	database.Init(os.Getenv("MONGO_URI"), "development")
+	database.InitRedis()
+
+	// Check redis connection
+
+	doc := database.GetRedis()
+
+	if err := doc.Ping(context.TODO()).Err(); err != nil {
+		fmt.Println("Error connecting to Redis")
+	} else {
+		fmt.Println("Connected to Redis")
+	}
 
 	fmt.Println("Connected to MongoDB")
 
@@ -41,6 +54,7 @@ func main() {
 	orgRoutes := router.Group("/")
 
 	handlers.AuthRoutes(router)
+	orgRoutes.Use(middlewares.JWTMiddleware)
 	handlers.OrganizationRoutes(orgRoutes)
 
 	router.Run(":8080")

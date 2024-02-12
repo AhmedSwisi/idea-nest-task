@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	database "ideanest/pkg"
 	model "ideanest/pkg/database/mongodb/models"
 	"log"
@@ -17,6 +18,8 @@ func AddOrganization(c *gin.Context) {
 	var organization model.Organization
 	db := database.GetDB().Collection("organizations")
 	err := c.BindJSON(&organization)
+
+	// Check if the organization name is empty
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
@@ -56,50 +59,177 @@ func AddOrganization(c *gin.Context) {
 	})
 }
 
+type OrgMemberResponse struct {
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	AccessLevel string `json:"access_level"`
+}
+
+type OrganizationResponse struct {
+	OrganizationID string              `json:"organization_id"`
+	Name           string              `json:"name"`
+	Description    string              `json:"description"`
+	OrgMembers     []OrgMemberResponse `json:"org_members"`
+}
+
 func GetAllOrganizations(c *gin.Context) {
-	var organizations []bson.M
-	cursor, err := database.GetDB().Collection("organizations").Find(context.TODO(), bson.M{})
+	var response []OrganizationResponse
+	var organizations []model.Organization
+	var user model.User
+	organizations_collection := database.GetDB().Collection("organizations")
+	user_collection := database.GetDB().Collection("users")
+
+	cursor, err := organizations_collection.Find(context.TODO(), bson.M{})
+
+	userId, exists := c.Get("user_id")
+
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found in context"})
+	}
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+
+		log.Printf("Error querying database: %v", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+
+	// Get the user from the database
+	oid, err := primitive.ObjectIDFromHex(userId.(string))
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	err = user_collection.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&user)
+
+	if err != nil {
+		log.Printf("Error querying database: %v", err)
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println("user fetched from context: ", user)
 
 	if err = cursor.All(context.TODO(), &organizations); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, organizations)
+	for _, org := range organizations {
+		var orgResponse OrganizationResponse
+		var orgMembersResponse []OrgMemberResponse
+
+		oid := org.ID
+
+		var orgMembers []model.OrganizationMember
+		orgMembersCursor, err := database.GetDB().Collection("organization_members").Find(context.TODO(), bson.M{"org_id": oid})
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err = orgMembersCursor.All(context.TODO(), &orgMembers); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		for _, member := range orgMembers {
+			var user model.User
+			err = user_collection.FindOne(context.TODO(), bson.M{"_id": member.UserID}).Decode(&user)
+
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+
+			orgMembersResponse = append(orgMembersResponse, OrgMemberResponse{
+				Name:        user.Name,
+				Email:       user.Email,
+				AccessLevel: member.AccessLevel,
+			})
+		}
+
+		orgResponse = OrganizationResponse{
+			OrganizationID: oid.Hex(),
+			Name:           org.Name,
+			Description:    org.Description,
+			OrgMembers:     orgMembersResponse,
+		}
+
+		response = append(response, orgResponse)
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 func GetOrganizationById(c *gin.Context) {
-	var organization model.Organization
-	id := c.Param("id")
+	var response []OrganizationResponse
+	var organizations model.Organization
+	organizations_collection := database.GetDB().Collection("organizations")
+	user_collection := database.GetDB().Collection("users")
 
-	db := database.GetDB().Collection("organizations")
+	_id := c.Param("id")
 
-	oid, err := primitive.ObjectIDFromHex(id)
+	oid, err := primitive.ObjectIDFromHex(_id)
 
-	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
-		return
-	}
-
-	err = db.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&organization)
+	// Check if the organization exists
+	err = organizations_collection.FindOne(context.TODO(), bson.M{"_id": oid}).Decode(&organizations)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			c.AbortWithStatus(http.StatusNotFound)
+			c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
 			return
 		} else {
-			log.Printf("Error querying database: %v", err)
-			c.AbortWithStatus(http.StatusInternalServerError)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}
 
-	c.JSON(http.StatusOK, organization)
-	return
+	var orgResponse OrganizationResponse
+
+	var orgMembersResponse []OrgMemberResponse
+
+	var orgMembers []model.OrganizationMember
+
+	orgMembersCursor, err := database.GetDB().Collection("organization_members").Find(context.TODO(), bson.M{"org_id": oid})
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err = orgMembersCursor.All(context.TODO(), &orgMembers); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	for _, member := range orgMembers {
+		var user model.User
+		err = user_collection.FindOne(context.TODO(), bson.M{"_id": member.UserID}).Decode(&user)
+
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		orgMembersResponse = append(orgMembersResponse, OrgMemberResponse{
+			Name:        user.Name,
+			Email:       user.Email,
+			AccessLevel: member.AccessLevel,
+		})
+	}
+
+	orgResponse = OrganizationResponse{
+		OrganizationID: oid.Hex(),
+		Name:           organizations.Name,
+		Description:    organizations.Description,
+		OrgMembers:     orgMembersResponse,
+	}
+
+	response = append(response, orgResponse)
+	c.JSON(http.StatusOK, response)
 }
 
 func UpdateOrganization(c *gin.Context) {
@@ -131,21 +261,54 @@ func UpdateOrganization(c *gin.Context) {
 		}
 	}
 
-	err = db.FindOne(context.TODO(), bson.M{"name": organization.Name}).Decode(&result)
+	if organization.Name != result["name"] {
+
+		err = db.FindOne(context.TODO(), bson.M{"name": organization.Name}).Decode(&result)
+
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				// no organization has this name
+			} else {
+				log.Printf("Error querying database: %v", err)
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+		} else {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "An organization with this name already exists. Please choose a different name.",
+			})
+			return
+		}
+	}
+
+	value, exists := c.Get("user_id")
+
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	uid, err := primitive.ObjectIDFromHex(value.(string))
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	// Check if the user is the owner of the organization
+	err = database.GetDB().Collection("organization_members").FindOne(context.TODO(), bson.M{"org_id": oid, "user_id": uid}).Decode(&result)
 
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			// no organization has this name
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "You are not authorized to update this organization",
+			})
+			return
 		} else {
 			log.Printf("Error querying database: %v", err)
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
 		}
-	} else {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-			"message": "An organization with this name already exists. Please choose a different name.",
-		})
-		return
 	}
 
 	_, err = db.UpdateOne(context.TODO(), bson.M{"_id": oid}, bson.M{"$set": organization})
@@ -158,6 +321,7 @@ func UpdateOrganization(c *gin.Context) {
 }
 
 func DeleteOrganization(c *gin.Context) {
+	var result bson.M
 	db := database.GetDB().Collection("organizations")
 	organizationId := c.Param("id")
 
@@ -168,14 +332,43 @@ func DeleteOrganization(c *gin.Context) {
 		return
 	}
 
-	result, err := db.DeleteOne(context.TODO(), bson.M{"_id": oid})
+	value, exists := c.Get("user_id")
+
+	if !exists {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "User not found in context"})
+		return
+	}
+
+	uid, err := primitive.ObjectIDFromHex(value.(string))
 
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	if result.DeletedCount < 1 {
+	err = database.GetDB().Collection("organization_members").FindOne(context.TODO(), bson.M{"org_id": oid, "user_id": uid}).Decode(&result)
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"message": "You are not authorized to delete this organization",
+			})
+			return
+		} else {
+			log.Printf("Error querying database: %v", err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+	}
+
+	dbResult, err := db.DeleteOne(context.TODO(), bson.M{"_id": oid})
+
+	if err != nil {
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	if dbResult.DeletedCount < 1 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Organization not found"})
 		return
 	}
@@ -256,7 +449,7 @@ func InviteUserToOrganization(c *gin.Context) {
 
 	orgUsers.ID = primitive.NewObjectID()
 	orgUsers.UserID = user.ID
-	orgUsers.AccessLevel = "r"
+	orgUsers.AccessLevel = "read"
 	orgUsers.OrgID = organization.ID
 
 	_, err = database.GetDB().Collection("organization_members").InsertOne(context.TODO(), orgUsers)

@@ -39,4 +39,12 @@ The project structure is designed to assist you in getting started quickly. You 
 
 ## Getting Started
 
-To begin working with the application, follow the instructions in the project documentation. Feel free to adjust the project structure as needed based on your preferences and evolving project requirements.
+To run the project make sure docker is installed and then run 
+```
+docker compose up
+```
+To view the Mongo database. Please visit
+```
+http://localhost:8081/ 
+```
+and the creds are admin:pass
